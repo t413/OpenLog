@@ -217,6 +217,7 @@ void(* Reset_AVR) (void) = 0; //Dirty way of resetting the ATmega, but it works 
 char folderTree[FOLDER_TRACK_DEPTH][12];
 
 #define CFG_FILENAME "config.txt" //This is the name of the file that contains the unit settings
+#define STARTUP_FILENAME "startup.txt" //This is the name of the file that contains the unit settings
 
 #define MAX_CFG "115200,103,214,0,1,1,0\0" //= 115200 bps, escape char of ASCII(103), 214 times, new log mode, verbose on, echo on, ignore RX false. 
 #define CFG_LENGTH (strlen(MAX_CFG) + 1) //Length of text found in config file. strlen ignores \0 so we have to add it back 
@@ -388,6 +389,8 @@ void setup(void)
 
   //Search for a config file and load any settings found. This will over-ride previous EEPROM settings if found.
   read_config_file();
+
+  read_startup_file();
 
   if(setting_ignore_RX == OFF) //If we are NOT ignoring RX, then
     check_emergency_reset(); //Look to see if the RX pin is being pulled low
@@ -853,6 +856,25 @@ void read_system_settings(void)
     setting_ignore_RX = OFF; //By default we DO NOT ignore RX
     EEPROM.write(LOCATION_IGNORE_RX, setting_ignore_RX);
   }
+}
+
+void read_startup_file(void)
+{
+  SdFile rootDirectory;
+  SdFile startupFile;
+  if (!rootDirectory.openRoot(&volume)) systemError(ERROR_ROOT_INIT); // open the root directory
+
+  char startupFileName[strlen(STARTUP_FILENAME)]; //Limited to 8.3
+  strcpy_P(startupFileName, PSTR(STARTUP_FILENAME)); //This is the name of the config file. 'config.sys' is probably a bad idea.
+
+  if (startupFile.open(&rootDirectory, startupFileName, O_READ)) {
+    uint8_t c = 0;
+    while (c = startupFile.read()) {
+      Serial.write(c);
+    }
+  }
+  configFile.close();
+  rootDirectory.close();
 }
 
 void read_config_file(void)
