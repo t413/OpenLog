@@ -96,6 +96,7 @@ SerialPort<0, 512, 0> NewSerial;
 void(* Reset_AVR) (void) = 0; //Way of resetting the ATmega
 
 #define CFG_FILENAME "config.txt" //This is the name of the file that contains the unit settings
+#define STARTUP_FILENAME "startup.txt" //This is the name of the file that contains the unit settings
 
 #define MAX_CFG "115200,103,214,0,1,1,0\0" //= 115200 bps, escape char of ASCII(103), 214 times, new log mode, verbose on, echo on, ignore RX false. 
 #define CFG_LENGTH (strlen(MAX_CFG) + 1) //Length of text found in config file. strlen ignores \0 so we have to add it back 
@@ -248,6 +249,8 @@ void setup(void)
   NewSerial.print(F("FreeStack: "));
   NewSerial.println(FreeStack());
 #endif
+
+  readStartupFile();
 
 }
 
@@ -716,6 +719,30 @@ void readSystemSettings(void)
     setting_ignore_RX = OFF; //By default we DO NOT ignore RX
     EEPROM.write(LOCATION_IGNORE_RX, setting_ignore_RX);
   }
+}
+
+void readStartupFile(void)
+{
+  SdFile rootDirectory;
+  SdFile startupFile;
+  if (!rootDirectory.openRoot(&volume)) systemError(ERROR_ROOT_INIT); // open the root directory
+
+  char startupFileName[strlen(STARTUP_FILENAME)]; //Limited to 8.3
+  strcpy_P(startupFileName, PSTR(STARTUP_FILENAME)); //This is the name of the config file. 'config.sys' is probably a bad idea.
+
+  if (startupFile.open(&rootDirectory, startupFileName, O_READ)) {
+    NewSerial.println();
+    size_t fsize = startupFile.fileSize();
+    uint16_t c = 0;
+    while ((c = startupFile.read()) >= 0 && fsize--) {
+      NewSerial.write((char)c);
+    }
+    NewSerial.println();
+  } else {
+    NewSerial.write(F("|nope|"));
+  }
+  startupFile.close();
+  rootDirectory.close();
 }
 
 void readConfigFile(void)
