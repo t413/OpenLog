@@ -868,12 +868,17 @@ void read_startup_file(void)
   strcpy_P(startupFileName, PSTR(STARTUP_FILENAME)); //This is the name of the config file. 'config.sys' is probably a bad idea.
 
   if (startupFile.open(&rootDirectory, startupFileName, O_READ)) {
-    uint8_t c = 0;
-    while (c = startupFile.read()) {
-      Serial.write(c);
+    NewSerial.println();
+    size_t fsize = startupFile.fileSize();
+    uint16_t c = 0;
+    while ((c = startupFile.read()) >= 0 && fsize--) {
+      NewSerial.write((char)c);
     }
+    NewSerial.println();
+  } else {
+    NewSerial.write(F("|nope|"));
   }
-  configFile.close();
+  startupFile.close();
   rootDirectory.close();
 }
 
